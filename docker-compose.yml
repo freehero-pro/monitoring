@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-monitoring}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monitoring}
+      POSTGRES_DB: ${POSTGRES_DB:-monitoring}
+    ports:
+      # Только с самого сервера: наружу база смотреть не должна.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-monitoring}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Локальный почтовый ящик: письма с magic-link видны на http://localhost:8025
+  mailhog:
+    image: mailhog/mailhog:latest
+    profiles: ['dev']
+    ports:
+      - '127.0.0.1:1025:1025'
+      - '127.0.0.1:8025:8025'
+
+  app:
+    build: .
+    profiles: ['prod']
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-monitoring}:${POSTGRES_PASSWORD:-monitoring}@postgres:5432/${POSTGRES_DB:-monitoring}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-monitoring@localhost}
+      RAW_RETENTION_DAYS: ${RAW_RETENTION_DAYS:-30}
+      TLS_WARN_DAYS: ${TLS_WARN_DAYS:-14}
+      MAX_CONCURRENT_CHECKS: ${MAX_CONCURRENT_CHECKS:-20}
+      AUTH_IP_RATE_LIMIT: ${AUTH_IP_RATE_LIMIT:-20}
+    ports:
+      # Наружу приложение выставляет reverse proxy, сам порт слушаем локально.
+      - '${APP_BIND:-127.0.0.1}:3000:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'node -e "fetch(\"http://127.0.0.1:3000/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres-data:
