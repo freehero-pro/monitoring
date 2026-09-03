@@ -36,7 +36,8 @@ npm run dev                   # API :3000, фронт :5173
 docker compose --profile prod up -d --build
 ```
 
-Собирается один образ: Fastify отдаёт и API, и статику фронта на порту 3000.
+Одна команда поднимает Postgres, приложение и Caddy: Fastify отдаёт API и статику фронта,
+Caddy получает сертификат Let's Encrypt для домена из `APP_BASE_URL` и продлевает его сам.
 Миграции применяются при старте.
 
 Полная инструкция — [docs/DEPLOY.md](docs/DEPLOY.md): переменные окружения, HTTPS и

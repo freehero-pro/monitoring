@@ -58,5 +58,27 @@ services:
       retries: 3
       start_period: 20s
 
+  # HTTPS: сертификат Let's Encrypt выпускается и продлевается автоматически.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ['prod']
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Выпущенные сертификаты переживают пересоздание контейнера — иначе при каждом
+      # перезапуске Caddy заново ходил бы в Let's Encrypt и упёрся бы в лимиты.
+      - caddy-data:/data
+      - caddy-config:/config
+
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:
