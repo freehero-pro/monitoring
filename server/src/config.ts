@@ -18,12 +18,11 @@ const envSchema = z.object({
   AUTH_IP_RATE_LIMIT: z.coerce.number().int().positive().default(20),
   ADMIN_EMAIL: z.string().email().optional().or(z.literal('').transform(() => undefined)),
 
-  SMTP_HOST: z.string().optional().or(z.literal('').transform(() => undefined)),
-  SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_SECURE: booleanish.default('false'),
-  SMTP_USER: z.string().optional().or(z.literal('').transform(() => undefined)),
-  SMTP_PASSWORD: z.string().optional().or(z.literal('').transform(() => undefined)),
-  MAIL_FROM: z.string().default('monitoring@localhost'),
+  // console — ссылка печатается в лог (разработка и первый вход),
+  // resend — письмо уходит через REST API Resend.
+  EMAIL_PROVIDER: z.enum(['console', 'resend']).default('console'),
+  EMAIL_FROM: z.string().default('monitoring@localhost'),
+  RESEND_API_KEY: z.string().optional().or(z.literal('').transform(() => undefined)),
 
   SCHEDULER_ENABLED: booleanish.default('true'),
   SCHEDULER_TICK_MS: z.coerce.number().int().positive().default(5000),
@@ -35,7 +34,16 @@ const envSchema = z.object({
 
   TLS_CHECK_INTERVAL_HOURS: z.coerce.number().int().positive().default(12),
   TLS_WARN_DAYS: z.coerce.number().int().positive().default(14),
-});
+})
+  .superRefine((env, ctx) => {
+    if (env.EMAIL_PROVIDER === 'resend' && !env.RESEND_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['RESEND_API_KEY'],
+        message: 'обязателен при EMAIL_PROVIDER=resend',
+      });
+    }
+  });
 
 export type Config = z.infer<typeof envSchema> & {
   isProduction: boolean;

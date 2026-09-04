@@ -17,14 +17,6 @@ services:
       timeout: 3s
       retries: 10
 
-  # Локальный почтовый ящик: письма с magic-link видны на http://localhost:8025
-  mailhog:
-    image: mailhog/mailhog:latest
-    profiles: ['dev']
-    ports:
-      - '127.0.0.1:1025:1025'
-      - '127.0.0.1:8025:8025'
-
   app:
     build: .
     profiles: ['prod']
@@ -38,12 +30,9 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-monitoring}:${POSTGRES_PASSWORD:-monitoring}@postgres:5432/${POSTGRES_DB:-monitoring}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_SECURE: ${SMTP_SECURE:-false}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      MAIL_FROM: ${MAIL_FROM:-monitoring@localhost}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-console}
+      EMAIL_FROM: ${EMAIL_FROM:-monitoring@localhost}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       RAW_RETENTION_DAYS: ${RAW_RETENTION_DAYS:-30}
       TLS_WARN_DAYS: ${TLS_WARN_DAYS:-14}
       MAX_CONCURRENT_CHECKS: ${MAX_CONCURRENT_CHECKS:-20}

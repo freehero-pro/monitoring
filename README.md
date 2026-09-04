@@ -16,16 +16,16 @@
 ## Быстрый старт
 
 ```bash
-cp .env.example .env          # укажите ADMIN_EMAIL, при желании SMTP
-docker compose --profile dev up -d postgres mailhog
+cp .env.example .env          # укажите ADMIN_EMAIL
+docker compose up -d postgres
 npm install
 npm run db:migrate
 npm run db:seed               # создаст администратора из ADMIN_EMAIL
 npm run dev                   # API :3000, фронт :5173
 ```
 
-Откройте http://localhost:5173, введите почту администратора. Письмо со ссылкой придёт
-в MailHog: http://localhost:8025. Если SMTP не настроен, ссылка печатается в лог сервера.
+Откройте http://localhost:5173 и введите почту администратора. При `EMAIL_PROVIDER=console`
+(значение по умолчанию) ссылка для входа печатается в лог сервера — письмо никуда не уходит.
 
 Для разработки в `.env` должно быть `APP_BASE_URL=http://localhost:5173` — Vite проксирует
 `/api` на сервер, поэтому cookie сессии работает как в проде.
@@ -108,7 +108,7 @@ POST с JSON и заголовками `X-Monitoring-Event` и (если зад�
 |---|---|
 | `DATABASE_URL` | Подключение к Postgres |
 | `APP_BASE_URL` | Публичный адрес сайта; из него собирается ссылка в письме |
-| `SMTP_*`, `MAIL_FROM` | Почта для magic-link; без `SMTP_HOST` ссылка идёт в лог |
+| `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY` | Отправка писем: `console` — ссылка в лог, `resend` — письмо через API Resend |
 | `ADMIN_EMAIL` | Кого создаст `npm run db:seed` |
 | `SCHEDULER_TICK_MS`, `MAX_CONCURRENT_CHECKS` | Частота опроса очереди и параллелизм |
 | `RAW_RETENTION_DAYS` | Сколько дней хранить сырые результаты |
