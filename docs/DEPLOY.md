@@ -118,22 +118,21 @@ docker compose logs caddy | grep -i certificate           # получение �
 
 ### Если на сервере уже есть свой прокси
 
-Тогда Caddy из стека не нужен — запускайте без него и проксируйте на `127.0.0.1:3000`
-сами:
+Caddy из стека не запускайте — он не сможет занять порты 80 и 443. Поднимайте только базу
+и приложение:
 
 ```bash
 docker compose --profile prod up -d postgres app
 ```
 
-Пример для nginx (сертификат — через certbot):
+Дальше выпуск сертификата берёт на себя certbot. Для nginx сначала добавьте обычный
+server-блок на 80 порту с проксированием, а TLS certbot допишет сам:
 
-```nginx
+```bash
+sudo tee /etc/nginx/sites-available/monitoring.company.ru >/dev/null <<'CONF'
 server {
-    listen 443 ssl;
+    listen 80;
     server_name monitoring.company.ru;
-
-    ssl_certificate     /etc/letsencrypt/live/monitoring.company.ru/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/monitoring.company.ru/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -143,7 +142,16 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+CONF
+
+sudo ln -sf /etc/nginx/sites-available/monitoring.company.ru /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d monitoring.company.ru --redirect
 ```
+
+`certbot --nginx` допишет в этот же блок `listen 443 ssl`, пути к сертификату и редирект
+с http, а продление повесит на системный таймер. Порядок важен: без работающего блока на
+80 порту certbot не сможет подтвердить владение доменом.
 
 `X-Forwarded-For` обязателен: без него все запросы выглядят приходящими с самого прокси, и
 лимит на выдачу ссылок входа сработает сразу на всех.
